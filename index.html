@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Brainrot Battler — Full One-File</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{
+  --blue:#243a4b;
+  --blue2:#2b4f66;
+  --brown:#6b4f2a;
+  --accent:#8fd3ff;
+}
+body{margin:0;background:var(--blue);color:#fff;font-family:system-ui}
+#top{position:fixed;top:0;left:0;right:0;height:64px;background:var(--brown);
+display:flex;align-items:center;gap:10px;padding:8px;z-index:10}
+button{background:var(--accent);border:none;border-radius:12px;padding:8px 14px;font-weight:700}
+.panel{position:fixed;top:70px;bottom:10px;width:340px;background:var(--blue2);
+border-radius:16px;padding:10px;overflow:auto;display:none}
+#fusion{right:10px} #index{left:10px}
+.card{background:#3b6b88;padding:6px;border-radius:10px;margin:4px 0;cursor:pointer}
+.lava{box-shadow:0 0 18px orange}
+canvas{display:block;margin-top:64px}
+.small{opacity:.8;font-size:12px}
+</style>
+</head>
+<body>
+<div id="top">
+💰 <span id="money">0</span>
+<button onclick="toggle('fusion')">Fusion</button>
+<button onclick="toggle('index')">Index</button>
+<span id="timers" class="small"></span>
+</div>
+<div id="fusion" class="panel"></div>
+<div id="index" class="panel"></div>
+<canvas id="c"></canvas>
+
+<script>
+/* ================= UTIL ================= */
+function blobToRaw(u){return u.replace('github.com','raw.githubusercontent.com').replace('/blob/','/');}
+
+/* ================= DATA ================= */
+const BRAINROTS = [
+  { name:"🐷💣 Svinina Bombardino", rarity:"Common", earn:1, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_0494.webp") },
+  { name:"🍕👾 Noobini Pizzanini", rarity:"Common", earn:2, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4179.webp") },
+  { name:"🐘🌵 Lirli Larila", rarity:"Common", earn:4, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4197.jpeg") },
+  { name:"🕶️🕊️ Frulli Frulla", rarity:"Common", earn:4, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3909.webp") },
+  { name:"🦐🐱 Trippi Troppi", rarity:"Common", earn:6, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_1940.webp") },
+  { name:"🐁💎 Talpa di Ferro", rarity:"Common", earn:8, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4120.webp") },
+  { name:"🥝🦝 Pipi Kiwi", rarity:"Common", earn:15, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3912.jpeg") },
+  { name:"🐰🍑 Follow Me Pipi", rarity:"Common", earn:7, img: "https://raw.githubusercontent.com/skibsmon2/BootyHole/main/IMG_4307.webp" },
+  { name:"🍌🍞 Trulibau Trulibanana", rarity:"Common", earn:9, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4271.webp") },
+
+  { name:"🪏😭 Aggarini La Panili", rarity:"Uncommon", earn:160, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4138.png") },
+  { name:"🦀🥥 Crabito Cocosito", rarity:"Uncommon", earn:150, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3999.png") },
+  { name:"🐖🌮 Tipi Topi Taco", rarity:"Uncommon", earn:180, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4187.jpeg") },
+  { name:"🐰🥑🐭 Pipi Avocado", rarity:"Uncommon", earn:220, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4215.webp") },
+
+  { name:"🐭🌽 Pipi Corni", rarity:"Rare", earn:1500, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3975.webp") },
+  { name:"🪵🫖 Ta Ta Ta Sahur", rarity:"Rare", earn:1400, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_0487.webp") },
+  { name:"🔫🦫 Bobrito Bandito", rarity:"Rare", earn:1700, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4128.webp") },
+  { name:"🛞🐸 Boneca Ambalabu", rarity:"Rare", earn:1600, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4125.webp") },
+  { name:"🦶 Gangster Footera", rarity:"Rare", earn:1800, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3976.webp") },
+  { name:"😊🫕 Tri Tri Tri Sahur", rarity:"Rare", earn:1750, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4214.webp") },
+  { name:"🐸🧑‍🏫☔️ Doi Doi Do", rarity:"Rare", earn:1650, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4216.webp") },
+  { name:"📟🏏 Buzz Buzz Buzz Sahur", rarity:"Rare", earn:1680, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4217.webp") },
+  { name:"🍞🤪 Didididi Sahur", rarity:"Rare", earn:1620, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4218.webp") },
+  { name:"🥥🪵 Turon Turon Turon Sahur", rarity:"Rare", earn:1550, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4252.webp") },
+  { name:"🐘🌵 Il Cacto Hipopotamo", rarity:"Rare", earn:1900, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4278.webp") },
+  { name:"🥥🏝️ Perrochello Lemonchello", rarity:"Rare", earn:1950, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3980.webp") },
+
+  { name:"⚽️🧢 Alessio", rarity:"Epic", earn:5200, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4116.jpeg") },
+  { name:"🦝🥥 Burbaloli Luliloli", rarity:"Epic", earn:5200, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3963.webp") },
+  { name:"🕊️🦶 Pippi Poppa Pippo Peppe (Pigeon Version)", rarity:"Epic", earn:4800, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4181.jpeg") },
+  { name:"🦉🥑 Avocadini Guffo", rarity:"Epic", earn:5000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4182.png") },
+  { name:"🦌🥑 Avocadini Antelopini", rarity:"Epic", earn:4800, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4142.jpeg") },
+  { name:"🦶🥒 Tric Trac Baraboom", rarity:"Epic", earn:5200, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3977.png") },
+  { name:"🥤☕️🗡️🥋 Cappucino Assassino", rarity:"Epic", earn:5600, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3917.png") },
+  { name:"🐱🐟 Trulimero Trulichina", rarity:"Epic", earn:5200, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4119.webp") },
+  { name:"🦔🍍 Snooffi Zeffirulli", rarity:"Epic", earn:4500, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4177.webp") },
+  { name:"🧱🤪 Ti Ti Ti Sahur", rarity:"Epic", earn:4200, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4192.webp") },
+  { name:"🥟🦌 Bambini Crostini", rarity:"Epic", earn:4600, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4198.jpeg") },
+  { name:"🥥🦑 Octopussi Coconussi", rarity:"Epic", earn:6000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4242.png") },
+  { name:"🥟🤪 Jianbanenenenenenenene", rarity:"Epic", earn:6300, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_20260110_163707.jpeg") },
+
+  { name:"🦧🌳 Brr Brr Patapim", rarity:"Legendary", earn:7000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4112.jpeg") },
+  { name:"🐵🍌 Chimpanzini Bananini", rarity:"Legendary", earn:6900, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_1932.webp") },
+  { name:"🫐🐙 Blueberrini Octopussini", rarity:"Legendary", earn:6900, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_1930.webp") },
+  { name:"🍉🐊 Glorbo Fruttodrillo", rarity:"Legendary", earn:7200, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_0492.webp") },
+  { name:"🥝🦎 Quivioli Ameleonni", rarity:"Legendary", earn:7000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4195.png") },
+  { name:"🥔🐹 Pipi Potato", rarity:"Legendary", earn:6500, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4196.jpeg") },
+  { name:"📠🐓 Tirilikalika Tirilikalako", rarity:"Legendary", earn:7300, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_2325.jpeg") },
+  { name:"🐘☕️ Elefante Cafettino", rarity:"Legendary", earn:7600, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4241.png") },
+  { name:"🍓🦩 Strawberrelli Flamingelli", rarity:"Legendary", earn:7900, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3996.webp") },
+  { name:"😔🐶🧢 Hankini Trollini", rarity:"Legendary", earn:7900, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/DogKid.png") },
+
+  { name:"🦓🍉 Zibra Zubra Zibralini", rarity:"Mythic", earn:8500, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_1927.webp") },
+  { name:"🦁🌵 Leonelli Cactuselli", rarity:"Mythic", earn:8800, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3913.webp") },
+  { name:"🤪☢️ Centralucci Nuclearucci", rarity:"Mythic", earn:9600, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3993.jpeg") },
+  { name:"🤑🍌 Bananito Bandito", rarity:"Mythic", earn:10000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4160.jpeg") },
+  { name:"🦀🎃 Crabbity Pumpkinitty", rarity:"Mythic", earn:9300, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4161.webp") },
+  { name:"🐊🍍 Crocodillo Ananasino", rarity:"Mythic", earn:9500, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4162.webp") },
+  { name:"🍣🐈 Pussini Susshini", rarity:"Mythic", earn:9400, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_1884.webp") },
+  { name:"🦧🍍 Orangutini Ananasini", rarity:"Mythic", earn:9200, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4183.jpeg") },
+  { name:"🎹🐴 Ecco Cavallo Virtuoso", rarity:"Mythic", earn:9000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4158.jpeg") },
+  { name:"💺👓 Rarerorirararol", rarity:"Mythic", earn:9100, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4204.webp") },
+  { name:"🕊️🕵️ Špijuniro Golubiro", rarity:"Mythic", earn:9800, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4205.webp") },
+  { name:"🍉🦍 Gorillo Watermelondrillo", rarity:"Mythic", earn:9900, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4245.webp") },
+  { name:"🥥🧑‍🏫 Brr Brr Gangster Gusini 🕊️🎩", rarity:"Mythic", earn:9200, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/Images_37.jpeg") },
+  { name:"🍃🥦 Francesco", rarity:"Mythic", earn:9400, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4213.webp") },
+  { name:"🍪👻 Nastar Ter Tar Tor", rarity:"Mythic", earn:9800, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4511.webp") },
+
+  { name:"🤑🏓🥏 Pingpong Kartelino", rarity:"Godly", earn:150000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_6600.png") },
+  { name:"🌊🥺💧🧑‍🚀 Aquanaut", rarity:"Godly", earn:130000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4115.webp") },
+  { name:"💪🦒🍊🎩 Ganganzeli Trulala", rarity:"Godly", earn:125000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_1929.webp") },
+  { name:"✈️🌮 Bombardini Tortini", rarity:"Godly", earn:120000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4167.webp") },
+  { name:"🚽👻 A A A Sahur", rarity:"Godly", earn:110000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4171.webp") },
+  { name:"👀🪘 Dug Dug Dug Dug Bedug Dug", rarity:"Godly", earn:200000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3926.webp") },
+  { name:"👀🪵 Tung Tung Tung Sahur", rarity:"Godly", earn:110000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_1734.webp") },
+  { name:"🦈🥿 Tralalero Tralala", rarity:"Godly", earn:95000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4107.webp") },
+  { name:"🌵🐧 Lerulerulerule", rarity:"Godly", earn:45000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_1928.webp") },
+  { name:"🥃🍋 Brr es Teh Patipum", rarity:"Godly", earn:52000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4113.webp") },
+  { name:"💪🍊 Odin Din Din Dun", rarity:"Godly", earn:78000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3923.webp") },
+  { name:"🚽🚂🦤 Trenostruzzo Turbo 3000", rarity:"Godly", earn:125000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4144.webp") },
+  { name:"🐟🫃 Trippi Troppi Troppa Trippa", rarity:"Godly", earn:110000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_1939.jpeg") },
+  { name:"🐵🕶️ Matteo", rarity:"Godly", earn:28000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4193.jpeg") },
+  { name:"🚬☕️ Espresso Signora", rarity:"Godly", earn:32000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4194.webp") },
+  { name:"🩰🥛 Ballerino Lololo", rarity:"Godly", earn:30000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4129.png") },
+  { name:"🚜🥔 Bulbito Bandito Traktorito", rarity:"Godly", earn:160000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3233.webp") },
+  { name:"⚫️🦈 Orcalero Orcala", rarity:"Godly", earn:140000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4135.webp") },
+  { name:"🦜🍌 Toucanno Banano", rarity:"Godly", earn:30000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4174.png") },
+  { name:"🐘🥥 Cocofanto Elefanto", rarity:"Godly", earn:18000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4206.png") },
+  { name:"🍇🚲 Vinny", rarity:"Godly", earn:135000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/Vinny.webp.png") },
+  { name:"🥝💰 Kiwito Bandito", rarity:"Godly", earn:145000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4287.jpeg") },
+  { name:"🥦🧐 Antonio", rarity:"Godly", earn:90000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4212.webp") },
+  { name:"🐷🍅 Gingobalo Gingobali", rarity:"Godly", earn:85000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4211.jpeg") },
+
+  { name:"🌎📺🦶 Il Mastodontico Telepiedone Planetario", rarity:"Secret", earn:3000000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_2162.webp") },
+  { name:"🪵🐘🐸🦐🦈👀 La Grande Combinazione", rarity:"Secret", earn:2600000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_2513.webp") },
+  { name:"📢📕 Tang Tang Keletang", rarity:"Secret", earn:2200000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4168.webp") },
+  { name:"🍳🥞👀 Darr Dirr Dorr Durr Telur Dadar", rarity:"Secret", earn:2100000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3995.webp") },
+  { name:"🌮🚲 Tacorita Bicicletea", rarity:"Secret", earn:2000000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4166.png") },
+  { name:"📲💀 Pot Hotspot", rarity:"Secret", earn:1900000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3915.webp") },
+  { name:"🪨🦶🥺🦶 Malamé Amaralé", rarity:"Secret", earn:1850000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3978.png") },
+  { name:"🚲🍕 Pizzanini Bicletera", rarity:"Secret", earn:1750000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4137.webp") },
+  { name:"🐏💎 Saphiri Ramiri", rarity:"Secret", earn:1700000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_2638.jpeg") },
+  { name:"👀 Karkekar Kurkur 🌐💺", rarity:"Secret", earn:1650000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4202.webp") },
+  { name:"💺 Chachechi 🔴", rarity:"Secret", earn:1600000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4201.webp") },
+  { name:"👁️ Te Te Te Sahur 🚪", rarity:"Secret", earn:1550000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_2420.webp") },
+  { name:"🍭🚲 Pirulitoita Bicicletaire", rarity:"Secret", earn:1600000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_1882.webp") },
+  { name:"🎰🚲 Chicleteira Bicicleteira", rarity:"Secret", earn:1500000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_2075.webp") },
+  { name:"🪵🥺 Los Tungtungtungcitos", rarity:"Secret", earn:1450000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3997.webp") },
+  { name:"🐊🧀 Coccodrillo Formaggioso", rarity:"Secret", earn:1450000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4139.png") },
+  { name:"🦈⚫️ Los Orcaleritos", rarity:"Secret", earn:1400000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4108.png") },
+  { name:"🐪🌵 Tob Tobi Tob", rarity:"Secret", earn:1400000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_2521.webp") },
+  { name:"🐢🍇 Torrtuginni Dragonfrutinni", rarity:"Secret", earn:1350000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_2529.webp") },
+  { name:"🥭🐅 Tigrulli Grapefrutunni", rarity:"Secret", earn:1650000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_2530.webp") },
+  { name:"🚌🕋 Rang Ring Reng Bus Ireng", rarity:"Secret", earn:1550000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4141.webp") },
+  { name:"✂️👀 Sisscorsss Sisscorsss y mi amigo Tung Tung Tung Sahur", rarity:"Secret", earn:1900000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_1667.webp") },
+  { name:"🐄🪐 La Vacca Saturno Saturnita", rarity:"Secret", earn:800000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_0493.webp") },
+  { name:"🍇🦑 Graipuss Medussi", rarity:"Secret", earn:900000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4159.jpeg") },
+  { name:"🏠📚 Alamak Senin Sekolah", rarity:"Secret", earn:2600000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_2431.webp") },
+  { name:"📣🏰 Anpali Babel", rarity:"Secret", earn:2750000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4305.webp") },
+
+  { name:"🍝🐉 Dragon Canelloni", rarity:"Exotic", earn:300000000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3991.jpeg") },
+  { name:"🍝🚽 Spaghetti Tualetti", rarity:"Exotic", earn:240000000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_1925.webp") },
+  { name:"🧂🍯 Garama and Madungdung", rarity:"Exotic", earn:260000000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4164.png") },
+  { name:"🥙 Ketupat Kepat", rarity:"Exotic", earn:220000000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_2519.webp") },
+  { name:"🏠9️⃣👅👀 La Esok Sekolah", rarity:"Exotic", earn:200000000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_3924.webp") },
+  { name:"🧀🦖 Gorgonzilla", rarity:"Exotic", earn:380000000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4173.webp") },
+  { name:"👾📵 Celularcini Viciosini", rarity:"Exotic", earn:140000000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4289.webp") },
+  { name:"🥭🥝 Mangolo Mangolini", rarity:"Exotic", earn:120000000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_4288.webp") },
+  { name:"🍕🍟🍔 Cuisine Trios", rarity:"Exotic", earn:150000000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/98FF0E6E-FC42-4421-A32C-D09A93CD4820.png") },
+  { name:"🫧 Bubblini Friendini 😁", rarity:"Exotic", earn:100000000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/IMG_0350.jpeg") },
+
+  { name:"🥳🔌 Party Socket", rarity:"Secret", earn:3500000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/C2831410-E661-45B9-9FE2-3515F8E0B14E.png") },
+  { name:"🎮👾 Party Arcadoo", rarity:"Secret", earn:3600000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/5E89E5D2-1B7A-4343-8529-CB6C188F0650.png") },
+  { name:"👾🥳 Party Bros", rarity:"Exotic", earn:600000000, img: blobToRaw("https://github.com/skibsmon2/BootyHole/blob/main/48E6FE05-98A1-447A-BDD8-B730FD9C7C54.png"), fusionOnly:true }
+];
+
+/* ================= GAME ================= */
+const LAVA_MULT=5.7, DESPAWN=40;
+const c=document.getElementById('c'), ctx=c.getContext('2d');
+function resize(){c.width=innerWidth;c.height=innerHeight-64}
+resize(); addEventListener('resize',resize);
+const player={x:300,y:200,s:4}, keys={};
+addEventListener('keydown',e=>keys[e.key.toLowerCase()]=1);
+addEventListener('keyup',e=>keys[e.key.toLowerCase()]=0);
+
+let money=0, enemies=[], allies=[];
+const timers={Legendary:300,Mythic:900,Godly:1800,Secret:3600};
+setInterval(()=>{
+  for(const r in timers){timers[r]--; if(timers[r]<=0){spawn(r); timers[r]=(r==='Legendary'?300:r==='Mythic'?900:r==='Godly'?1800:3600);}}
+},1000);
+
+function toggle(id){const p=document.getElementById(id); p.style.display=p.style.display==='block'?'none':'block'; if(id==='fusion')renderFusion(); if(id==='index')renderIndex();}
+
+function spawn(force){
+  const pool=force?BRAINROTS.filter(b=>b.rarity===force):BRAINROTS;
+  const b=pool[Math.floor(Math.random()*pool.length)];
+  const lava=Math.random()<0.06;
+  enemies.push({b,x:Math.random()*c.width,y:Math.random()*c.height,hp:120,t:DESPAWN,lava,earn:b.earn*(lava?LAVA_MULT:1)});
+}
+
+/* ===== Fusion ===== */
+let fusionSlots=[];
+function renderFusion(){
+  fusion.innerHTML='<h3>Fusion</h3><div class="card">'+(fusionSlots.map(b=>b.name).join(' + ')||'Pick 3')+'</div>'+
+  '<button onclick="fuse()">FUSE</button> <button onclick="fusionSlots=[];renderFusion()">Clear</button>'+
+  allies.map((a,i)=>'<div class="card" onclick="add('+i+')">'+a.b.name+'</div>').join('');
+}
+function add(i){if(fusionSlots.length<3) fusionSlots.push(allies[i].b), renderFusion();}
+function fuse(){
+  const n=fusionSlots.map(b=>b.name);
+  if(n.includes('🥳🔌 Party Socket') && n.includes('🎮👾 Party Arcadoo')){
+    allies.push({b:BRAINROTS.find(b=>b.name==='👾🥳 Party Bros'), earn:600000000});
+    alert('👾🥳 PARTY BROS CREATED');
+  } else alert('Fusion failed');
+  fusionSlots=[]; renderFusion();
+}
+
+/* ===== Index ===== */
+function renderIndex(){
+  index.innerHTML='<h3>Brainrot Index</h3>'+BRAINROTS.map(b=>'<div class="card">'+b.name+' ('+b.rarity+')</div>').join('');
+}
+
+/* ===== Loop ===== */
+function loop(){
+  ctx.clearRect(0,0,c.width,c.height);
+  if(keys.w)player.y-=player.s; if(keys.s)player.y+=player.s;
+  if(keys.a)player.x-=player.s; if(keys.d)player.x+=player.s;
+  ctx.fillStyle='#8fd3ff'; ctx.beginPath(); ctx.arc(player.x,player.y,22,0,7); ctx.fill();
+
+  enemies=enemies.filter(e=>{
+    e.t-=1/60;
+    ctx.fillStyle=e.lava?'orange':'#c9a36a';
+    ctx.beginPath(); ctx.arc(e.x,e.y,46,0,7); ctx.fill();
+    if(Math.hypot(e.x-player.x,e.y-player.y)<60){ e.hp--; if(e.hp<=0){allies.push(e); return false;} }
+    return e.t>0;
+  });
+
+  allies.forEach(a=>money+=a.earn/200000);
+  document.getElementById('money').textContent=Math.floor(money);
+  document.getElementById('timers').textContent=`L:${timers.Legendary}s M:${timers.Mythic}s G:${timers.Godly}s S:${timers.Secret}s`;
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
